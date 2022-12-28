@@ -1,4 +1,4 @@
-**Are you thinking about copying your thesis in word and copy/paste-ing it into Overleaf to build a Latex document?**
+**Are you thinking about writing your thesis in word and copy/paste-ing it into Overleaf to build a Latex document?**
 
 **STOP!**
 
