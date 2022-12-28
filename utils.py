@@ -9,11 +9,12 @@ from pylatex.section import Chapter
 from pylatex.utils import italic
 
 THESIS_DIR_TOPLEVEL = "/Users/prajayshah/OneDrive/UTPhD/2022/Thesis-writing"
+GRAPHICS_DIR = "/Users/prajayshah/OneDrive/UTPhD/2022/Thesis-writing/_figure-items"
 EXCLUDE_DIRS = ('9_Archive', 'presentations', '_figure-items', '_archive')
 
 
-def convert_docx_to_(directory: str, extension: str, exclude: Union[tuple, List] = EXCLUDE_DIRS,
-                        docx_files=None):
+def convert_docx_to_(extension: str, exclude: Union[tuple, List] = EXCLUDE_DIRS,
+                     docx_files=None, directory: str = THESIS_DIR_TOPLEVEL):
     """
     Convert all .docx files in a directory to the desired extension files using pypandoc
 
@@ -21,7 +22,7 @@ def convert_docx_to_(directory: str, extension: str, exclude: Union[tuple, List]
     :param docx_files: list of docx files
     :return: None
     """
-    docx_files = _get_docx_list(directory=directory, exclude= exclude) if not docx_files else docx_files
+    docx_files = _get_docx_list(directory=directory, exclude=exclude) if not docx_files else docx_files
     # get list of all .docx files in directory
     for filename in docx_files:
         filepath = os.path.join(directory, filename)
@@ -80,13 +81,24 @@ def read_contents(filename: str, directory: str = THESIS_DIR_TOPLEVEL) -> str:
     return content
 
 
+def _open_preview(*args):
+    """
+    Open 1 or more files using Preview on Mac.
+
+    :param filepath: path to pdf file
+    :return: None
+    """
+    import subprocess
+    for filepath in args:
+        assert os.path.exists(filepath), f'File not found: {filepath}'
+        subprocess.run(['open', '-a', 'Preview', filepath])
+
+
 class MyLtxDocument(Document):
     def __init__(self, title: str = 'Thesis-latex', author: str = 'Prajay T. Shah',
                  date: str = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"), documentclass=NoEscape("ut-thesis"),
-                 document_options=['normalmargins', '12pt', 'onehalfspacing'],
-                 filename: str = 'Thesis-ltx', directory: str = THESIS_DIR_TOPLEVEL):
-
-        # self.doc = Document(documentclass=NoEscape('ut-thesis'))
+                 document_options=['normalmargins', '12pt', 'onehalfspacing'], filename: str = 'Thesis-ltx',
+                 directory: str = THESIS_DIR_TOPLEVEL, graphics_dir: str = GRAPHICS_DIR):
 
         super().__init__(documentclass=documentclass, document_options=document_options)
 
@@ -100,6 +112,7 @@ class MyLtxDocument(Document):
         self.preamble.append(Command('department', 'Biomedical Engineering'))
         self.preamble.append(Command('gradyear', '2022'))
         self.preamble.append(Command('doublespacing'))
+        self.add_graphics(root_path=graphics_dir)
         # self.preamble.append(Command('addbibresource', NoEscape('/Users/prajayshah/OneDrive/UTPhD/2022/Thesis-writing/My Library.bib')))
 
         self.add_bib(bib_path=NoEscape('/Users/prajayshah/OneDrive/UTPhD/2022/Thesis-writing/My Library.bib'))
@@ -135,6 +148,10 @@ class MyLtxDocument(Document):
     def filename(self, filename: str):
         self.__filename = filename
 
+    @property
+    def export_path(self):
+        "path for the exported file"
+        return os.path.join(self.save_dir, self.filename)
 
     def fill_document(self):
         """Add a section, a subsection and some text to the document."""
@@ -144,7 +161,6 @@ class MyLtxDocument(Document):
 
             with self.create(Subsection('A subsection')):
                 self.append('Also some crazy characters: $&#{}')
-
 
     def save_ltx_pdf(self, filename: str = None, directory: str = None):
         """
@@ -161,21 +177,19 @@ class MyLtxDocument(Document):
         # save document
         tex = self.dumps()
         print(tex)
-        print(f'\nSaving rendered latex pdf to: {os.path.join(self.save_dir, self.filename)}.pdf ...', end='\r')
-        self.generate_pdf(os.path.join(self.save_dir, self.filename))
-        print(f'\nSaved rendered latex pdf to: {os.path.join(self.save_dir, self.filename)}.pdf')
-
+        print(f'\nSaving compiled latex pdf to: {self.export_path}.pdf ...', end='\r')
+        self.generate_pdf(self.export_path)
+        print(f'\nSaved compiled latex pdf to: {self.export_path}.pdf')
 
     def save_ltx_tex(self):
         """
-        Save current latex document as a tex file
+        Save current latex document as a tex file.
 
         :return: None
         """
-        print(f'\nSaving rendered latex tex to: {os.path.join(self.save_dir, self.filename)}.tex ...', end='\r')
-        self.generate_tex(os.path.join(self.save_dir, self.filename))
-        print(f'\nSaved rendered latex tex to: {os.path.join(self.save_dir, self.filename)}.tex')
-
+        print(f'\nSaving compiled latex tex to: {self.export_path}.tex ...', end='\r')
+        self.generate_tex(self.export_path)
+        print(f'\nSaved compiled latex tex to: {self.export_path}.tex')
 
     def add_chapter(self, title: str):
         """
@@ -218,15 +232,22 @@ class MyLtxDocument(Document):
         return subsection, section
 
     # add input statement
-    def add_input(self, tex_path):
-        # alternate way of reading and then appending the text in .tex file directly:
+    def add_input(self, *args):
+        # alternate way of reading and then appending the contents in the .tex file directly:
         # latex_document = tex_path
         # with open(latex_document) as file:
         #     tex = file.read()
         # self.append(NoEscape(tex))
         #####
+        for tex_path in args:
+            assert type(tex_path) == str, f'Input path must be a string, not {type(tex_path)}'
+            assert tex_path[-4:] == '.tex', f'Input path must be a .tex file, not {tex_path[-4:]}'
+            assert os.path.exists(tex_path), f'File not found: {tex_path}'
+            self.append(Command('input', NoEscape(tex_path)))
 
-        self.append(Command('input', tex_path))
+    def add_graphics(self, root_path):
+        self.packages.append(Package('graphicx'))
+        self.preamble.append(Command('graphicspath', NoEscape(' {%s/} ' % root_path)))
 
     # add .bib references document
     def add_bib(self, bib_path):
@@ -252,6 +273,6 @@ class MyLtxDocument(Document):
         """
         self.append(Command(command, *args, **kwargs))
 
+
 if __name__ == '__main__':
     newdoc = MyLtxDocument()
-
