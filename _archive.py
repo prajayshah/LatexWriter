@@ -22,6 +22,33 @@
 #     doc.generate_pdf(os.path.join(directory, filename))
 
 # %%
+
+def ch_am1(doc: MyLtxDocument):
+    doc.add_input('/Users/prajayshah/OneDrive/UTPhD/2022/Thesis-writing/3_Results/ch-aim1/aim1-full.tex')
+
+    return doc
+
+
+def ch_am2(doc: MyLtxDocument):
+    doc.add_input('/Users/prajayshah/OneDrive/UTPhD/2022/Thesis-writing/3_Results/ch-aim2/aim2-full.tex')
+
+    return doc
+
+
+def ch_am3(doc: MyLtxDocument):
+    doc.add_input('/Users/prajayshah/OneDrive/UTPhD/2022/Thesis-writing/3_Results/ch-aim3/aim3-full.tex')
+
+    return doc
+
+
+def ch_general_discussion(doc: MyLtxDocument):
+    doc.add_input('/Users/prajayshah/OneDrive/UTPhD/2022/Thesis-writing/4_Discussion/Discussion_full.tex')
+
+    return doc
+
+
+
+# %%
 chapter = doc.add_chapter('A1: Imaging+: An integrated analysis tool-suite in Python for multi-modal neuroscience data')
 
 # add introduction chapter

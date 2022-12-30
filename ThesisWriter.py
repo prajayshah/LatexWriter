@@ -1,101 +1,299 @@
+# utility functions
 import datetime
 import os
+import pypandoc
 
-from pylatex import Section, Command
-from pylatex.section import Chapter, Subsection
-from pylatex.utils import italic, NoEscape
+from typing import List, Union
+from pylatex import Document, Section, Subsection, Command, NoEscape, Package
+from pylatex.section import Chapter
+from pylatex.utils import italic
 
-from utils import THESIS_DIR_TOPLEVEL, read_contents, MyLtxDocument, convert_docx_to_, _open_preview
-
-PDF_PATH = '/Users/prajayshah/OneDrive/UTPhD/2022/Thesis-writing/Thesis-ltx.pdf'
-
-def ch_am1(doc: MyLtxDocument):
-    doc.add_input('/Users/prajayshah/OneDrive/UTPhD/2022/Thesis-writing/3_Results/ch-aim1/aim1-full.tex')
-
-    return doc
+THESIS_DIR_TOPLEVEL = "/Users/prajayshah/OneDrive/UTPhD/2022/Thesis-writing"
+GRAPHICS_DIR = "/Users/prajayshah/OneDrive/UTPhD/2022/Thesis-writing/_figure-items/export"
+EXCLUDE_DIRS = ('9_Archive', 'presentations', '_figure-items', '_archive')
 
 
-def ch_am2(doc: MyLtxDocument):
-    doc.add_input('/Users/prajayshah/OneDrive/UTPhD/2022/Thesis-writing/3_Results/ch-aim2/aim2-full.tex')
-
-    return doc
-
-
-def ch_am3(doc: MyLtxDocument):
-    doc.add_input('/Users/prajayshah/OneDrive/UTPhD/2022/Thesis-writing/3_Results/ch-aim3/aim3-full.tex')
-
-    return doc
-
-
-def ch_general_discussion(doc: MyLtxDocument):
-    doc.add_input('/Users/prajayshah/OneDrive/UTPhD/2022/Thesis-writing/4_Discussion/Discussion_full.tex')
-
-    return doc
-
-
-def ch_general_introduction(doc: MyLtxDocument):
-    inputs = ['/Users/prajayshah/OneDrive/UTPhD/2022/Thesis-writing/1_Introduction/Topic 1- Neuronal excitability.docx',
-              '/Users/prajayshah/OneDrive/UTPhD/2022/Thesis-writing/1_Introduction/Topic 2- All optical technique.docx',
-              '/Users/prajayshah/OneDrive/UTPhD/2022/Thesis-writing/1_Introduction/Topic 3- Epilepsy and seizures.docx',
-              '/Users/prajayshah/OneDrive/UTPhD/2022/Thesis-writing/1_Introduction/Hypothesis.docx']
-
-    doc.add_input(*inputs)
-
-    # input_path = '/Users/prajayshah/OneDrive/UTPhD/2022/Thesis-writing/1_Introduction/Topic 1- Neuronal excitability.tex'
-    # doc.add_input(tex_path=NoEscape(input_path))
-    #
-    # input_path = '/Users/prajayshah/OneDrive/UTPhD/2022/Thesis-writing/1_Introduction/Topic 2- All optical technique.tex'
-    # doc.add_input(tex_path=NoEscape(input_path))
-    #
-    # input_path = '/Users/prajayshah/OneDrive/UTPhD/2022/Thesis-writing/1_Introduction/Topic 3- Epilepsy and seizures.tex'
-    # doc.add_input(tex_path=NoEscape(input_path))
-    #
-    # input_path = '/Users/prajayshah/OneDrive/UTPhD/2022/Thesis-writing/1_Introduction/Hypothesis.tex'
-    # doc.add_input(tex_path=NoEscape(input_path))
-
-    return doc
-
-
-def assemble_texdoc(doc: MyLtxDocument = None):
+def convert_docx_to_(extension: str, exclude: Union[tuple, List] = EXCLUDE_DIRS,
+                     docx_files: list = None, directory: str = THESIS_DIR_TOPLEVEL):
     """
-    Assemble the full tex document in order with all the chapters.
+    Convert all .docx files in a directory to the desired extension files using pypandoc
 
-    :param doc: the initialized tex doc
+    :param extension: extension of the new file type
+    :param docx_files: list of docx files
+    :return: None
     """
-    if doc is None:
-        doc: MyLtxDocument = MyLtxDocument(
-            **{'title': NoEscape('The profile of neuronal excitability in epilepsy and seizure'),
-               'author': 'Prajay T. Shah',
-               'date': NoEscape(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")),
-               'filename': NoEscape('Thesis-ltx'),
-               'directory': THESIS_DIR_TOPLEVEL})
-    doc.add_input('/Users/prajayshah/OneDrive/UTPhD/2022/Thesis-writing/acronyms.docx')
-    doc = ch_general_introduction(doc)
-    doc.add_input('/Users/prajayshah/OneDrive/UTPhD/2022/Thesis-writing/3_Results/ch-aim1/aim1-full.docx')
-    doc.add_input('/Users/prajayshah/OneDrive/UTPhD/2022/Thesis-writing/3_Results/ch-aim2/aim2-full.docx')
-    doc.add_input('/Users/prajayshah/OneDrive/UTPhD/2022/Thesis-writing/3_Results/ch-aim3/aim3-full.tex')
-    doc.add_input('/Users/prajayshah/OneDrive/UTPhD/2022/Thesis-writing/4_Discussion/Discussion_full.tex')
-    doc.append(Command('printbibliography'))
-    doc.save_ltx_tex()
-    doc.save_ltx_pdf()
-    _open_preview(doc.export_path + '.pdf')
+    docx_files = _get_docx_list(directory=directory, exclude=exclude) if not docx_files else docx_files
+    # get list of all .docx files in directory
+    for filename in docx_files:
+        filepath = os.path.join(directory, filename)
+        _convert_to_(filepath=filepath, extension=extension)
+
+    # convert_docx_to_(docx_files, extension=extension, directory=directory)
 
 
-# %%
-# run the program using Ctrl-R in PyCharm or calling ThesisWriter.main() from the console or `python ThesisWriter.py` from the command line
+def _get_docx_list(directory: str, exclude: Union[tuple, List] = EXCLUDE_DIRS) -> list:
+    """
+    Get all .docx files in a directory
+
+    :param directory: path to directory containing .docx files
+    :param exclude: list of directory paths to exclude from search and conversion
+    :return: None
+    """
+
+    # get list of all .docx files in directory recursively
+    docx_files = []
+    for root, dirs, files in os.walk(directory, topdown=True):
+        dirs[:] = [d for d in dirs if d not in exclude]
+        for file in files:
+            if file.endswith(".docx"):
+                path = os.path.join(root, file)
+                # print(path)
+                docx_files.append(path)
+    return docx_files
+
+
+def _convert_to_(filepath, extension):
+    # output = pypandoc.convert_file(filepath, 'plain')
+    output = pypandoc.convert_file(filepath, 'plain')
+    with open(filepath[:-5] + extension, 'w') as f:
+        f.write(output)
+    print(f'Converted: {filepath}')
+
+
+def read_contents(filename: str, directory: str = THESIS_DIR_TOPLEVEL) -> str:
+    """
+    Read the contents of a file in a directory
+
+    :param filename: name of file to read
+    :param directory: path to directory containing file
+    :return: contents of file as string
+    """
+
+    if directory in filename:
+        filepath = filename
+    else:
+        filepath = os.path.join(directory, filename)
+
+    assert os.path.exists(filepath), f'File not found: {filepath}'
+
+    with open(filepath, 'r') as f:
+        content = f.read()
+    return content
+
+
+def _open_preview(*args):
+    """
+    Open 1 or more files using Preview on Mac.
+
+    :param filepath: path to pdf file
+    :return: None
+    """
+    import subprocess
+    for filepath in args:
+        assert os.path.exists(filepath), f'File not found: {filepath}'
+        subprocess.run(['open', '-a', 'Preview', filepath])
+
+
+class MyLtxDocument(Document):
+    def __init__(self, title: str = 'Thesis-latex', author: str = 'Prajay T. Shah',
+                 date: str = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"), documentclass=NoEscape("ut-thesis"),
+                 document_options=['normalmargins', '12pt', 'onehalfspacing'], filename: str = 'Thesis-ltx',
+                 directory: str = THESIS_DIR_TOPLEVEL, graphics_dir: str = GRAPHICS_DIR):
+
+        super().__init__(documentclass=documentclass, document_options=document_options)
+
+        self.packages.append(Package('biblatex', options=NoEscape('backend=biber')))
+        self.packages.append(Package('hyperref', options=NoEscape('colorlinks')))
+        self.packages.append(Package('caption'))
+        self.packages.append(Package('acronym', options=('printonlyused', 'nohyperlinks')))
+        self.preamble.append(Command('title', title))
+        self.preamble.append(Command('author', author))
+        self.preamble.append(Command('date', date))
+        self.preamble.append(Command('degree', 'Doctor of Philosophy'))
+        self.preamble.append(Command('department', 'Biomedical Engineering'))
+        self.preamble.append(Command('gradyear', '2022'))
+        self.preamble.append(Command('doublespacing'))
+        self.add_graphics(root_path=graphics_dir)
+        # self.preamble.append(Command('addbibresource', NoEscape('/Users/prajayshah/OneDrive/UTPhD/2022/Thesis-writing/My Library.bib')))
+
+        self.add_bib(bib_path=NoEscape('/Users/prajayshah/OneDrive/UTPhD/2022/Thesis-writing/My Library.bib'))
+
+        self.append(NoEscape(r'\maketitle'))
+
+        self.add_pre_content_matter()
+        self.append(Command('tableofcontents'))
+        self.append(Command('listoffigures'))
+        # self.append(Command('listoftables'))
+        self.__save_dir = directory
+        self.__filename = filename
+
+        # print(self.dumps())
+
+        # self.generate_pdf(os.path.join(self.save_dir, self.filename))
+
+        # self.save_ltx_pdf()
+
+    @property
+    def save_dir(self):
+        return self.__save_dir
+
+    @save_dir.setter
+    def save_dir(self, directory: str):
+        self.__save_dir = directory
+
+    @property
+    def filename(self):
+        return self.__filename
+
+    @filename.setter
+    def filename(self, filename: str):
+        self.__filename = filename
+
+    @property
+    def export_path(self):
+        "path for the exported file"
+        return os.path.join(self.save_dir, self.filename)
+
+    def fill_document(self):
+        """Add a section, a subsection and some text to the document."""
+        with self.create(Section('A section')):
+            self.append('Some regular text and some ')
+            self.append(italic('italic text. '))
+
+            with self.create(Subsection('A subsection')):
+                self.append('Also some crazy characters: $&#{}')
+
+    def save_ltx_pdf(self, filename: str = None, directory: str = None):
+        """
+        Save current latex document as a pdf
+
+        :param filename: filename of latex document
+        :param directory: directory to save pdf in
+        :return: None
+        """
+
+        if filename is not None: self.filename = filename
+        if directory is not None: self.save_dir = directory
+
+        # save document
+        tex = self.dumps()
+        print(tex)
+        print(f'\nSaving compiled latex pdf to: {self.export_path}.pdf ...', end='\r')
+        self.generate_pdf(self.export_path)
+        print(f'\nSaved compiled latex pdf to: {self.export_path}.pdf')
+
+    def save_ltx_tex(self):
+        """
+        Save current latex document as a tex file.
+
+        :return: None
+        """
+        print(f'\nSaving compiled latex tex to: {self.export_path}.tex ...', end='\r')
+        self.generate_tex(self.export_path)
+        print(f'\nSaved compiled latex tex to: {self.export_path}.tex')
+
+    def add_chapter(self, title: str):
+        """
+        Add a chapter to the latex document
+
+        :param title: title of chapter
+        :return: None
+        """
+        chapter = Chapter(title)
+
+        self.append(chapter)
+        return chapter
+
+    # add section to latex document
+    def add_section(self, chapter: Chapter, title: str, content: str):
+        """
+        Add a section to the latex document under the specified chapter
+        :param chapter: chapter to add section to
+        :param title: title of section
+        :param content: content of section
+        :return:
+        """
+        section = Section(title)
+        section.append(content)
+        chapter.append(section)
+        return section, chapter
+
+    # add subsection to latex document
+    def add_subsection_from_txt(self, section: Section, title: str, content: str):
+        """
+        Add a subsection to the latex document under the specified section
+        :param section: section to add subsection to
+        :param title: title of subsection
+        :param content: content of subsection
+        :return:
+        """
+        subsection = Subsection(title)
+        subsection.append(content)
+        section.append(subsection)
+        return subsection, section
+
+    # add input statement
+    def add_input(self, *args):
+        # alternate way of reading and then appending the contents in the .tex file directly:
+        # latex_document = tex_path
+        # with open(latex_document) as file:
+        #     tex = file.read()
+        # self.append(NoEscape(tex))
+        #####
+        for tex_path in args:
+            assert type(tex_path) == str, f'Input path must be a string, not {type(tex_path)}'
+            assert os.path.exists(tex_path), f'File not found: {tex_path}'
+            if tex_path[-4:] != '.tex' and tex_path[-5:] == '.docx':
+                convert_docx_to_(extension='.tex', docx_files=[tex_path])
+                tex_path = tex_path[:-5] + '.tex'
+            assert tex_path[-4:] == '.tex', f'Input file is not a .tex file'
+            self.append(Command('input', NoEscape(tex_path)))
+
+    # add include statement
+    def add_include(self, *args):
+        # alternate way of reading and then appending the contents in the .tex file directly:
+        # latex_document = tex_path
+        # with open(latex_document) as file:
+        #     tex = file.read()
+        # self.append(NoEscape(tex))
+        #####
+        for tex_path in args:
+            assert type(tex_path) == str, f'include path must be a string, not {type(tex_path)}'
+            assert os.path.exists(tex_path), f'File not found: {tex_path}'
+            if tex_path[-4:] != '.tex' and tex_path[-5:] == '.docx':
+                convert_docx_to_(extension='.tex', docx_files=[tex_path])
+                tex_path = tex_path[:-5] + '.tex'
+            assert tex_path[-4:] == '.tex', f'include file is not a .tex file'
+            self.append(Command('include', NoEscape(tex_path)))
+
+    def add_graphics(self, root_path):
+        self.packages.append(Package('graphicx'))
+        self.preamble.append(Command('graphicspath', NoEscape(' {%s/} ' % root_path)))
+
+    # add .bib references document
+    def add_bib(self, bib_path):
+        # self.preamble.append(Command('usepackage', arguments='biblatex', options=NoEscape('backend=biber')))
+        self.preamble.append(Command('addbibresource', bib_path))
+
+    def add_pre_content_matter(self):
+        self.append(Command('begin', 'dedication'))
+        self.append(NoEscape("To everyone who has a passion for science."))
+        self.append(Command('end', 'dedication'))
+        self.append(Command('begin', 'acknowledgements'))
+        self.append(NoEscape("Thanks Mom and Dad and Preet."))
+        self.append(Command('end', 'acknowledgements'))
+
+    def command(self, command: str, *args, **kwargs):
+        """
+        Add a command to the latex document
+
+        :param command: command to add
+        :param args: arguments to command
+        :param kwargs: options to command
+        :return: None
+        """
+        self.append(Command(command, *args, **kwargs))
+
+
 if __name__ == '__main__':
-    assemble_texdoc()
-
-
-# _open_preview(PDF_PATH)
-# convert_docx_to_(extension='.tex', directory='/Users/prajayshah/OneDrive/UTPhD/2022/Thesis-writing/')
-# convert_docx_to_(extension='.tex', docx_files=[
-#                      '/Users/prajayshah/OneDrive/UTPhD/2022/Thesis-writing/1_Introduction/Topic 1- Neuronal excitability.docx',
-#                      '/Users/prajayshah/OneDrive/UTPhD/2022/Thesis-writing/1_Introduction/Topic 2- All optical technique.tex',
-#                      '/Users/prajayshah/OneDrive/UTPhD/2022/Thesis-writing/1_Introduction/Topic 3- Epilepsy and seizures.tex',
-#                      '/Users/prajayshah/OneDrive/UTPhD/2022/Thesis-writing/1_Introduction/Hypothesis.tex',
-#                      '/Users/prajayshah/OneDrive/UTPhD/2022/Thesis-writing/3_Results/ch-aim1/aim1-full.docx',
-#                      '/Users/prajayshah/OneDrive/UTPhD/2022/Thesis-writing/3_Results/ch-aim2/aim2-full.docx',
-#                      '/Users/prajayshah/OneDrive/UTPhD/2022/Thesis-writing/3_Results/ch-aim3/aim3-full.docx',
-#                      '/Users/prajayshah/OneDrive/UTPhD/2022/Thesis-writing/4_Discussion/Discussion_full.docx',
-#                  ])
+    newdoc = MyLtxDocument()
