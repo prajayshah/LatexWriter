@@ -9,12 +9,12 @@ from pylatex.section import Chapter
 from pylatex.utils import italic
 
 THESIS_DIR_TOPLEVEL = "/Users/prajayshah/OneDrive/UTPhD/2022/Thesis-writing"
-GRAPHICS_DIR = "/Users/prajayshah/OneDrive/UTPhD/2022/Thesis-writing/_figure-items"
+GRAPHICS_DIR = "/Users/prajayshah/OneDrive/UTPhD/2022/Thesis-writing/_figure-items/export"
 EXCLUDE_DIRS = ('9_Archive', 'presentations', '_figure-items', '_archive')
 
 
 def convert_docx_to_(extension: str, exclude: Union[tuple, List] = EXCLUDE_DIRS,
-                     docx_files=None, directory: str = THESIS_DIR_TOPLEVEL):
+                     docx_files: list = None, directory: str = THESIS_DIR_TOPLEVEL):
     """
     Convert all .docx files in a directory to the desired extension files using pypandoc
 
@@ -104,7 +104,8 @@ class MyLtxDocument(Document):
 
         self.packages.append(Package('biblatex', options=NoEscape('backend=biber')))
         self.packages.append(Package('hyperref', options=NoEscape('colorlinks')))
-
+        self.packages.append(Package('caption'))
+        self.packages.append(Package('acronym', options=('printonlyused', 'nohyperlinks')))
         self.preamble.append(Command('title', title))
         self.preamble.append(Command('author', author))
         self.preamble.append(Command('date', date))
@@ -122,7 +123,7 @@ class MyLtxDocument(Document):
         self.add_pre_content_matter()
         self.append(Command('tableofcontents'))
         self.append(Command('listoffigures'))
-        self.append(Command('listoftables'))
+        # self.append(Command('listoftables'))
         self.__save_dir = directory
         self.__filename = filename
 
@@ -241,9 +242,29 @@ class MyLtxDocument(Document):
         #####
         for tex_path in args:
             assert type(tex_path) == str, f'Input path must be a string, not {type(tex_path)}'
-            assert tex_path[-4:] == '.tex', f'Input path must be a .tex file, not {tex_path[-4:]}'
             assert os.path.exists(tex_path), f'File not found: {tex_path}'
+            if tex_path[-4:] != '.tex' and tex_path[-5:] == '.docx':
+                convert_docx_to_(extension='.tex', docx_files=[tex_path])
+                tex_path = tex_path[:-5] + '.tex'
+            assert tex_path[-4:] == '.tex', f'Input file is not a .tex file'
             self.append(Command('input', NoEscape(tex_path)))
+
+    # add include statement
+    def add_include(self, *args):
+        # alternate way of reading and then appending the contents in the .tex file directly:
+        # latex_document = tex_path
+        # with open(latex_document) as file:
+        #     tex = file.read()
+        # self.append(NoEscape(tex))
+        #####
+        for tex_path in args:
+            assert type(tex_path) == str, f'include path must be a string, not {type(tex_path)}'
+            assert os.path.exists(tex_path), f'File not found: {tex_path}'
+            if tex_path[-4:] != '.tex' and tex_path[-5:] == '.docx':
+                convert_docx_to_(extension='.tex', docx_files=[tex_path])
+                tex_path = tex_path[:-5] + '.tex'
+            assert tex_path[-4:] == '.tex', f'include file is not a .tex file'
+            self.append(Command('include', NoEscape(tex_path)))
 
     def add_graphics(self, root_path):
         self.packages.append(Package('graphicx'))
