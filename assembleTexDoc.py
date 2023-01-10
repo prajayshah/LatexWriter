@@ -1,10 +1,9 @@
 import datetime
 import os
 
-from pylatex import Command
 from pylatex.utils import NoEscape
 
-from ThesisWriter import THESIS_DIR_TOPLEVEL, MyLtxDocument, convert_docx_to_, _open_preview
+from LatexWriter import THESIS_DIR_TOPLEVEL, MyLtxDocument, convert_docx_to_, _open_preview
 
 PDF_PATH = '/Users/prajayshah/OneDrive/UTPhD/2022/Thesis-writing/Thesis-ltx.pdf'
 
@@ -13,21 +12,10 @@ def ch_general_introduction(doc: MyLtxDocument):
     inputs = ['/Users/prajayshah/OneDrive/UTPhD/2022/Thesis-writing/1_Introduction/Topic 1- Neuronal excitability.docx',
               '/Users/prajayshah/OneDrive/UTPhD/2022/Thesis-writing/1_Introduction/Topic 2- All optical technique.docx',
               '/Users/prajayshah/OneDrive/UTPhD/2022/Thesis-writing/1_Introduction/Topic 3- Epilepsy and seizures.docx',
-              '/Users/prajayshah/OneDrive/UTPhD/2022/Thesis-writing/1_Introduction/Hypothesis.docx']
+              '/Users/prajayshah/OneDrive/UTPhD/2022/Thesis-writing/1_Introduction/Hypothesis.docx'
+              ]
 
     doc.add_input(*inputs)
-
-    # input_path = '/Users/prajayshah/OneDrive/UTPhD/2022/Thesis-writing/1_Introduction/Topic 1- Neuronal excitability.tex'
-    # doc.add_input(tex_path=NoEscape(input_path))
-    #
-    # input_path = '/Users/prajayshah/OneDrive/UTPhD/2022/Thesis-writing/1_Introduction/Topic 2- All optical technique.tex'
-    # doc.add_input(tex_path=NoEscape(input_path))
-    #
-    # input_path = '/Users/prajayshah/OneDrive/UTPhD/2022/Thesis-writing/1_Introduction/Topic 3- Epilepsy and seizures.tex'
-    # doc.add_input(tex_path=NoEscape(input_path))
-    #
-    # input_path = '/Users/prajayshah/OneDrive/UTPhD/2022/Thesis-writing/1_Introduction/Hypothesis.tex'
-    # doc.add_input(tex_path=NoEscape(input_path))
 
     return doc
 
@@ -40,18 +28,19 @@ def assemble_texdoc(doc: MyLtxDocument = None):
     """
     if doc is None:
         doc: MyLtxDocument = MyLtxDocument(
-            **{'title': NoEscape('The profile of neuronal excitability in epilepsy and seizure'),
-               'author': 'Prajay T. Shah',
-               'date': NoEscape(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")),
-               'filename': NoEscape('Thesis-ltx'),
+            **{'filename': NoEscape('Thesis-ltx'),
                'directory': THESIS_DIR_TOPLEVEL})
+    doc.startThesis(**{'title': NoEscape('The profile of neuronal excitability in epilepsy and seizure'),
+                       'author': 'Prajay T. Shah',
+                       'date': NoEscape(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"))})
     doc.add_input('/Users/prajayshah/OneDrive/UTPhD/2022/Thesis-writing/acronyms.docx')
+    # doc.append(Command('pagenumbering', options='arabic'))
     doc = ch_general_introduction(doc)
     doc.add_input('/Users/prajayshah/OneDrive/UTPhD/2022/Thesis-writing/3_Results/ch-aim1/aim1-full.docx')
     doc.add_input('/Users/prajayshah/OneDrive/UTPhD/2022/Thesis-writing/3_Results/ch-aim2/aim2-full.docx')
     doc.add_input('/Users/prajayshah/OneDrive/UTPhD/2022/Thesis-writing/3_Results/ch-aim3/aim3-full.docx')
     doc.add_input('/Users/prajayshah/OneDrive/UTPhD/2022/Thesis-writing/4_Discussion/Discussion_full.docx')
-    doc.append(Command('printbibliography'))
+    doc.add_bib(bib_path=NoEscape('/Users/prajayshah/OneDrive/UTPhD/2022/Thesis-writing/My Library.bib'))
     doc.save_ltx_tex()
     doc.save_ltx_pdf()
     _open_preview(doc.export_path + '.pdf')
@@ -62,7 +51,7 @@ def assemble_texdoc(doc: MyLtxDocument = None):
 if __name__ == '__main__':
     assemble_texdoc()
 
-
+# %%
 # _open_preview(PDF_PATH)
 # convert_docx_to_(extension='.tex', directory='/Users/prajayshah/OneDrive/UTPhD/2022/Thesis-writing/')
 # convert_docx_to_(extension='.tex', docx_files=[

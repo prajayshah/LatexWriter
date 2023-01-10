@@ -23,10 +23,13 @@ def convert_docx_to_(extension: str, exclude: Union[tuple, List] = EXCLUDE_DIRS,
     :return: None
     """
     docx_files = _get_docx_list(directory=directory, exclude=exclude) if not docx_files else docx_files
+    [print("\t", doc) for doc in docx_files]
     # get list of all .docx files in directory
     for filename in docx_files:
-        filepath = os.path.join(directory, filename)
-        _convert_to_(filepath=filepath, extension=extension)
+        if '$~' in filename: pass
+        else:
+            filepath = os.path.join(directory, filename)
+            _convert_to_(filepath=filepath, extension=extension)
 
     # convert_docx_to_(docx_files, extension=extension, directory=directory)
 
@@ -95,43 +98,26 @@ def _open_preview(*args):
 
 
 class MyLtxDocument(Document):
-    def __init__(self, title: str = 'Thesis-latex', author: str = 'Prajay T. Shah',
-                 date: str = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"), documentclass=NoEscape("ut-thesis"),
+    def __init__(self, document_class=NoEscape("ut-thesis"),
                  document_options=['normalmargins', '12pt', 'onehalfspacing'], filename: str = 'Thesis-ltx',
                  directory: str = THESIS_DIR_TOPLEVEL, graphics_dir: str = GRAPHICS_DIR):
 
-        super().__init__(documentclass=documentclass, document_options=document_options)
+        super().__init__(documentclass=document_class, document_options=document_options)
 
-        self.packages.append(Package('biblatex', options=NoEscape('backend=biber')))
         self.packages.append(Package('hyperref', options=NoEscape('colorlinks')))
         self.packages.append(Package('caption'))
+        self.packages.append(Package('amsmath'))
+        self.packages.append(Package('enumitem'))
         self.packages.append(Package('acronym', options=('printonlyused', 'nohyperlinks')))
-        self.preamble.append(Command('title', title))
-        self.preamble.append(Command('author', author))
-        self.preamble.append(Command('date', date))
-        self.preamble.append(Command('degree', 'Doctor of Philosophy'))
-        self.preamble.append(Command('department', 'Biomedical Engineering'))
-        self.preamble.append(Command('gradyear', '2022'))
-        self.preamble.append(Command('doublespacing'))
+
         self.add_graphics(root_path=graphics_dir)
         # self.preamble.append(Command('addbibresource', NoEscape('/Users/prajayshah/OneDrive/UTPhD/2022/Thesis-writing/My Library.bib')))
 
-        self.add_bib(bib_path=NoEscape('/Users/prajayshah/OneDrive/UTPhD/2022/Thesis-writing/My Library.bib'))
+        # self.append(Command('pagenumbering', options='roman'))
 
-        self.append(NoEscape(r'\maketitle'))
-
-        self.add_pre_content_matter()
-        self.append(Command('tableofcontents'))
-        self.append(Command('listoffigures'))
-        # self.append(Command('listoftables'))
         self.__save_dir = directory
         self.__filename = filename
 
-        # print(self.dumps())
-
-        # self.generate_pdf(os.path.join(self.save_dir, self.filename))
-
-        # self.save_ltx_pdf()
 
     @property
     def save_dir(self):
@@ -153,6 +139,48 @@ class MyLtxDocument(Document):
     def export_path(self):
         "path for the exported file"
         return os.path.join(self.save_dir, self.filename)
+
+    def startThesis(self, title: str = 'Thesis-latex', author: str = 'Prajay T. Shah',
+                 date: str = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),):
+        self.preamble.append(Command('title', title))
+        self.preamble.append(Command('author', author))
+        self.preamble.append(Command('date', date))
+        self.preamble.append(Command('degree', 'Doctor of Philosophy'))
+        self.preamble.append(Command('department', 'Biomedical Engineering'))
+        self.preamble.append(Command('gradyear', '2022'))
+        self.preamble.append(Command('doublespacing'))
+        self.add_pre_content_matter()
+        self.append(Command('tableofcontents'))
+        self.append(Command('listoffigures'))
+        # self.append(Command('listoftables'))
+        self.append(NoEscape(r'\maketitle'))
+
+    def add_Figure_Env(self):
+        """
+        New figure environment to use for placing figures. Use `\begin{figurehere}` to start figure in the tex doc.
+
+        latex commands being added in this function:
+
+        \makeatletter
+        \newenvironment{figurehere}
+        {\def\@captype{figure}}
+        {}
+        \makeatletter
+
+        """
+        self.preamble.append(Command(NoEscape(r"makeatletter")))
+        self.preamble.append(Command(NoEscape(r"newenvironment{figurehere}")))
+        self.preamble.append(NoEscape(r"{\def\@captype{figure}}"))
+        self.preamble.append(NoEscape(r"{}"))
+        self.preamble.append(Command(NoEscape(r"makeatletter")))
+
+
+
+    def set_default_font_sf(self, font_type: str = 'helvet'):
+
+        self.packages.append(Package(NoEscape(font_type), options=('scaled')))
+        self.packages.append(Package('fontenc', options=('T1')))
+        self.preamble.append(Command(NoEscape(r"\renewcommand\familydefault{\sfdefault}")))
 
     def fill_document(self):
         """Add a section, a subsection and some text to the document."""
@@ -178,9 +206,9 @@ class MyLtxDocument(Document):
         # save document
         tex = self.dumps()
         print(tex)
-        print(f'\nSaving compiled latex pdf to: {self.export_path}.pdf ...', end='\r')
+        print(f'\nCompiling latex pdf ...', end='\r')
         self.generate_pdf(self.export_path)
-        print(f'\nSaved compiled latex pdf to: {self.export_path}.pdf')
+        print(f'\n\t\__ Saved compiled latex pdf to: {self.export_path}.pdf')
 
     def save_ltx_tex(self):
         """
@@ -272,8 +300,20 @@ class MyLtxDocument(Document):
 
     # add .bib references document
     def add_bib(self, bib_path):
-        # self.preamble.append(Command('usepackage', arguments='biblatex', options=NoEscape('backend=biber')))
+        # self.packages.append(Package('natbib'))
+        # self.preamble.append(Command('bibliographystyle', 'agsm'))
+        # self.append(Command('bibliography', NoEscape('/Users/prajayshah/OneDrive/UTPhD/2022/Thesis-writing/My Library.bib')))
+
+        # BIBLATEX
+        self.packages.append(Package('biblatex', options=(
+            # NoEscape('backend=biber'),
+            # NoEscape('style=authoryear'),
+            # NoEscape('sorting=nyt')
+        )))
         self.preamble.append(Command('addbibresource', bib_path))
+        self.append(Command('printbibliography'))
+
+
 
     def add_pre_content_matter(self):
         self.append(Command('begin', 'dedication'))
