@@ -2,7 +2,7 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/.idea/ThesisWriter.iml" filepath="$PROJECT_DIR$/.idea/ThesisWriter.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/LatexWriter.iml" filepath="$PROJECT_DIR$/.idea/LatexWriter.iml" />
     </modules>
   </component>
 </project>

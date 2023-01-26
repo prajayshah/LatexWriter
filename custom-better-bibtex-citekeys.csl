@@ -48,7 +48,7 @@
       <key macro="title"/>
       <key macro="year-date"/>
     </sort>
-    <layout delimiter="}\cite{" prefix="\cite{" suffix="}">
+    <layout delimiter="}\citep{" prefix="\citep{" suffix="}">
       <group>
         <text value=""/>
         <text variable="citation-key"/>

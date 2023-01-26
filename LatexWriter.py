@@ -23,10 +23,11 @@ def convert_docx_to_(extension: str, exclude: Union[tuple, List] = EXCLUDE_DIRS,
     :return: None
     """
     docx_files = _get_docx_list(directory=directory, exclude=exclude) if not docx_files else docx_files
+    print('\nTo convert ... ')
     [print("\t", doc) for doc in docx_files]
     # get list of all .docx files in directory
     for filename in docx_files:
-        if '$~' in filename: pass
+        if '~$' in filename: pass
         else:
             filepath = os.path.join(directory, filename)
             _convert_to_(filepath=filepath, extension=extension)
@@ -84,11 +85,11 @@ def read_contents(filename: str, directory: str = THESIS_DIR_TOPLEVEL) -> str:
     return content
 
 
-def _open_preview(*args):
+def open_preview(*args):
     """
     Open 1 or more files using Preview on Mac.
 
-    :param filepath: path to pdf file
+    :param filepath: path to file
     :return: None
     """
     import subprocess
@@ -97,15 +98,30 @@ def _open_preview(*args):
         subprocess.run(['open', '-a', 'Preview', filepath])
 
 
+def open_texstudio(*args):
+    """
+    Open 1 or more files using texstudio on Mac.
+
+    :param filepath: path to .tex file
+    :return: None
+    """
+    import subprocess
+    for filepath in args:
+        assert os.path.exists(filepath), f'File not found: {filepath}'
+        subprocess.run(['open', '-a', 'texstudio', filepath])
+
+
 class MyLtxDocument(Document):
     def __init__(self, document_class=NoEscape("ut-thesis"),
-                 document_options=['normalmargins', '12pt', 'onehalfspacing'], filename: str = 'Thesis-ltx',
+                 document_options=['normalmargins', '12pt'], filename: str = 'Thesis-ltx',
                  directory: str = THESIS_DIR_TOPLEVEL, graphics_dir: str = GRAPHICS_DIR):
 
         super().__init__(documentclass=document_class, document_options=document_options)
 
-        self.packages.append(Package('hyperref', options=NoEscape('colorlinks')))
+        # "colorlinks=true, citecolor=black, urlcolor=blue"
+        self.packages.append(Package('hyperref', options=NoEscape('colorlinks=true, citecolor=black, urlcolor=blue, linkcolor=black')))
         self.packages.append(Package('caption'))
+        self.packages.append(Package('setspace'))
         self.packages.append(Package('amsmath'))
         self.packages.append(Package('enumitem'))
         self.packages.append(Package('acronym', options=('printonlyused', 'nohyperlinks')))
@@ -141,19 +157,33 @@ class MyLtxDocument(Document):
         return os.path.join(self.save_dir, self.filename)
 
     def startThesis(self, title: str = 'Thesis-latex', author: str = 'Prajay T. Shah',
-                 date: str = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),):
+                 date: str = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"), acknowledgements=''):
         self.preamble.append(Command('title', title))
         self.preamble.append(Command('author', author))
         self.preamble.append(Command('date', date))
         self.preamble.append(Command('degree', 'Doctor of Philosophy'))
         self.preamble.append(Command('department', 'Biomedical Engineering'))
         self.preamble.append(Command('gradyear', '2022'))
-        self.preamble.append(Command('doublespacing'))
-        self.add_pre_content_matter()
+        # self.preamble.append(Command('doublespacing'))
+        self.append(NoEscape(r'\maketitle'))
+        self.add_acknowledgements(acknowledgements)
         self.append(Command('tableofcontents'))
+        self.append(Command('newpage'))
         self.append(Command('listoffigures'))
         # self.append(Command('listoftables'))
-        self.append(NoEscape(r'\maketitle'))
+        self.add_list_of_eqations()
+
+    def add_list_of_eqations(self):
+        "from https://tex.stackexchange.com/questions/173102/table-of-equations-like-list-of-figures"
+        self.packages.append(Package('tocloft'))
+        self.preamble.append(NoEscape(r"\newcommand{\listequationsname}{List of Equations}"))
+        self.preamble.append(NoEscape(r"\newlistof{myequations}{equ}{\listequationsname}"))
+        self.preamble.append(NoEscape(r"\newcommand{\myequations}[1]{%"))
+        self.preamble.append(NoEscape(r"\addcontentsline{equ}{myequations}{\protect\numberline{\theequation}#1}\par}"))
+        self.preamble.append(NoEscape(r"\setlength{\cftmyequationsnumwidth}{2.5em}% Width of equation number in List of Equations"))
+
+        self.append(Command('newpage'))
+        self.append(Command('listofmyequations'))
 
     def add_Figure_Env(self):
         """
@@ -174,22 +204,18 @@ class MyLtxDocument(Document):
         self.preamble.append(NoEscape(r"{}"))
         self.preamble.append(Command(NoEscape(r"makeatletter")))
 
-
+    def set_margins(self, margin='2in'):
+        self.packages.append(Package('geometry', options=('a4paper', fr'margin={margin}')))
 
     def set_default_font_sf(self, font_type: str = 'helvet'):
 
         self.packages.append(Package(NoEscape(font_type), options=('scaled')))
         self.packages.append(Package('fontenc', options=('T1')))
-        self.preamble.append(Command(NoEscape(r"\renewcommand\familydefault{\sfdefault}")))
+        self.preamble.append(Command(NoEscape(r"renewcommand\familydefault{\sfdefault}")))
 
-    def fill_document(self):
-        """Add a section, a subsection and some text to the document."""
-        with self.create(Section('A section')):
-            self.append('Some regular text and some ')
-            self.append(italic('italic text. '))
-
-            with self.create(Subsection('A subsection')):
-                self.append('Also some crazy characters: $&#{}')
+    def print_tex(self):
+        tex = self.dumps()
+        print(tex)
 
     def save_ltx_pdf(self, filename: str = None, directory: str = None):
         """
@@ -204,8 +230,7 @@ class MyLtxDocument(Document):
         if directory is not None: self.save_dir = directory
 
         # save document
-        tex = self.dumps()
-        print(tex)
+        self.print_tex()
         print(f'\nCompiling latex pdf ...', end='\r')
         self.generate_pdf(self.export_path)
         print(f'\n\t\__ Saved compiled latex pdf to: {self.export_path}.pdf')
@@ -219,6 +244,21 @@ class MyLtxDocument(Document):
         print(f'\nSaving compiled latex tex to: {self.export_path}.tex ...', end='\r')
         self.generate_tex(self.export_path)
         print(f'\nSaved compiled latex tex to: {self.export_path}.tex')
+
+    def add_pdf_file(self, file, pages=None):
+        """include pages from a pdf file.
+        Uses the pdfpages latex package.
+
+        Example of how to use `pages` argument to specify pages to customize:
+        \includepdf[pages={1}]{myfile.pdf} % to include just first page of the file
+        \includepdf[pages={1,3,5}]{myfile.pdf} % would include pages 1, 3, and 5 of the file
+        To include the entire file, you specify pages={-}, where {-} is a range without the endpoints specified which default to the first and last pages, respectively
+
+        source: https://stackoverflow.com/questions/2739159/inserting-a-pdf-file-in-latex
+        """
+        pgs = r'pages=-' if pages is None else ('pages={' + NoEscape(fr'{pages}') + '}')
+        self.packages.append(Package('pdfpages'))
+        self.append(Command(NoEscape('includepdf'), arguments=NoEscape(file), options=NoEscape(pgs)))
 
     def add_chapter(self, title: str):
         """
@@ -300,28 +340,24 @@ class MyLtxDocument(Document):
 
     # add .bib references document
     def add_bib(self, bib_path):
-        # self.packages.append(Package('natbib'))
-        # self.preamble.append(Command('bibliographystyle', 'agsm'))
-        # self.append(Command('bibliography', NoEscape('/Users/prajayshah/OneDrive/UTPhD/2022/Thesis-writing/My Library.bib')))
+        # NATBIB:
+        self.packages.append(Package('natbib', options='round, comma'))
+        self.preamble.append(Command('bibliographystyle', 'plainnat'))
+        self.append(Command(NoEscape('addcontentsline{toc}{chapter}{Bibliography}')))
+        self.append(Command('bibliography', NoEscape(bib_path)))
+        "\addcontentsline{toc}{chapter}{Bibliography}"
+        # # BIBLATEX
+        # self.packages.append(Package('biblatex', options=(
+        #     # NoEscape('backend=biber'),
+        #     # NoEscape('style=authoryear'),
+        #     # NoEscape('sorting=nyt')
+        # )))
+        # self.preamble.append(Command('addbibresource', bib_path))
+        # self.append(Command('printbibliography'))
 
-        # BIBLATEX
-        self.packages.append(Package('biblatex', options=(
-            # NoEscape('backend=biber'),
-            # NoEscape('style=authoryear'),
-            # NoEscape('sorting=nyt')
-        )))
-        self.preamble.append(Command('addbibresource', bib_path))
-        self.append(Command('printbibliography'))
+    def add_acknowledgements(self, file):
+        self.add_input(file)
 
-
-
-    def add_pre_content_matter(self):
-        self.append(Command('begin', 'dedication'))
-        self.append(NoEscape("To everyone who has a passion for science."))
-        self.append(Command('end', 'dedication'))
-        self.append(Command('begin', 'acknowledgements'))
-        self.append(NoEscape("Thanks Mom and Dad and Preet."))
-        self.append(Command('end', 'acknowledgements'))
 
     def command(self, command: str, *args, **kwargs):
         """
