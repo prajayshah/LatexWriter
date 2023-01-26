@@ -2,3 +2,5 @@
 convertDocxFiles.py
 assembleAllopticalSz.py
 assembleThesisTexDoc.py
+_archive.py
+tests
