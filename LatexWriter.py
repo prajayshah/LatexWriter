@@ -14,7 +14,7 @@ EXCLUDE_DIRS = ('9_Archive', 'presentations', '_figure-items', '_archive')
 
 
 def convert_docx_to_(extension: str, exclude: Union[tuple, List] = EXCLUDE_DIRS,
-                     docx_files: list = None, directory: str = THESIS_DIR_TOPLEVEL):
+                     docx_files: list = None, directory: str = THESIS_DIR_TOPLEVEL, ref_modified_file: str = None):
     """
     Convert all .docx files in a directory to the desired extension files using pypandoc
 
@@ -23,14 +23,18 @@ def convert_docx_to_(extension: str, exclude: Union[tuple, List] = EXCLUDE_DIRS,
     :return: None
     """
     docx_files = _get_docx_list(directory=directory, exclude=exclude) if not docx_files else docx_files
-    print('\nTo convert ... ')
+    print('\nChecking for conversion ... ')
     [print("\t", doc) for doc in docx_files]
     # get list of all .docx files in directory
     for filename in docx_files:
         if '~$' in filename: pass
         else:
             filepath = os.path.join(directory, filename)
-            _convert_to_(filepath=filepath, extension=extension)
+            to_update = True
+            if ref_modified_file:
+                if os.path.getmtime(filepath) < os.path.getmtime(ref_modified_file):
+                    to_update = False
+            _convert_to_(filepath=filepath, extension=extension) if to_update else None
 
     # convert_docx_to_(docx_files, extension=extension, directory=directory)
 
@@ -119,7 +123,7 @@ class MyLtxDocument(Document):
         super().__init__(documentclass=document_class, document_options=document_options)
 
         # "colorlinks=true, citecolor=black, urlcolor=blue"
-        self.packages.append(Package('hyperref', options=NoEscape('colorlinks=true, citecolor=black, urlcolor=blue, linkcolor=black')))
+        self.packages.append(Package('hyperref', options=NoEscape('colorlinks=true, citecolor=black, urlcolor=blue, linkcolor=blue')))
         self.packages.append(Package('caption'))
         self.packages.append(Package('setspace'))
         self.packages.append(Package('amsmath'))
@@ -172,6 +176,7 @@ class MyLtxDocument(Document):
         self.append(Command('listoffigures'))
         # self.append(Command('listoftables'))
         self.add_list_of_eqations()
+        self.add_codeword_command()
 
     def add_list_of_eqations(self):
         "from https://tex.stackexchange.com/questions/173102/table-of-equations-like-list-of-figures"
@@ -204,6 +209,23 @@ class MyLtxDocument(Document):
         self.preamble.append(NoEscape(r"{}"))
         self.preamble.append(Command(NoEscape(r"makeatletter")))
 
+    def add_codeword_command(self):
+        """
+        Adding new document command for command(codeword)
+
+        NewDocumentCommand{\codeword}{v}{%
+    	colorbox{light-gray}{%
+		texttt{\textcolor{blue}{#1}}}}
+
+        """
+        self.packages.append(Package('xcolor'))
+        self.preamble.append(NoEscape(r"\definecolor{light-gray}{gray}{0.95}"))
+        self.preamble.append(NoEscape(r"\NewDocumentCommand{\codeword}{v}{"))
+        self.preamble.append(NoEscape(r"\colorbox{light-gray}{"))
+        self.preamble.append(NoEscape(r"\texttt{\textcolor{blue}{#1}}}}"))
+
+
+
     def set_margins(self, margin='2in'):
         self.packages.append(Package('geometry', options=('a4paper', fr'margin={margin}')))
 
@@ -215,7 +237,8 @@ class MyLtxDocument(Document):
 
     def print_tex(self):
         tex = self.dumps()
-        print(tex)
+        print("\nLatex file contents:")
+        print("\t", tex.replace('\n', '\n\t'))
 
     def save_ltx_pdf(self, filename: str = None, directory: str = None):
         """
@@ -339,10 +362,10 @@ class MyLtxDocument(Document):
         self.preamble.append(Command('graphicspath', NoEscape(' {%s/} ' % root_path)))
 
     # add .bib references document
-    def add_bib(self, bib_path):
+    def add_natbib(self, bib_path):
         # NATBIB:
         self.packages.append(Package('natbib', options='round, comma'))
-        self.preamble.append(Command('bibliographystyle', 'plainnat'))
+        self.preamble.append(Command('bibliographystyle', 'agsm'))
         self.append(Command(NoEscape('addcontentsline{toc}{chapter}{Bibliography}')))
         self.append(Command('bibliography', NoEscape(bib_path)))
         "\addcontentsline{toc}{chapter}{Bibliography}"
