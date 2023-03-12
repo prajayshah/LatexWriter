@@ -2,7 +2,7 @@
 
 **STOP!**
 
-**Use ThesisWriter.**
+**Use LatexWriter.**
 
 This repo is designed to enable a hybrid option for writing your content in word, and then directly running a few lines in Python to create a full Latex document (utilizes the ```pylatex``` package).
 This is useful for those who are not familiar with Latex, but want to use it to create a thesis document. 
