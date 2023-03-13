@@ -13,15 +13,15 @@ This is useful for those who are not familiar with Latex, but want to use it to 
 - Create a compiled Latex document as .tex and .pdf output
 - Open the .pdf document in preview on Mac
 
-**WARNING:** the overall procedure requires you to write latex commands directly in the word doc for the following (since the docx to tex conversion outputs plain-text):
+**WARNING:** the overall procedure requires writing latex commands directly in the word doc for the following (since the docx to tex conversion outputs plain-text):
 - specifying chapters, sections, subsections, etc.
 - specifying the figures and tables, along with their in-text references 
 - specifying special symbols and characters (e.g. $\alpha$)
-- in-text citations to articles, books etc. (e.g. \cite{[citation-key]})
+- in-text citations to articles, books etc. (e.g. \cite{[citation-key]}) - though also see the note below
 - in-text acronyms and the corresponding acronym list (which needs to be added as a separate section, following the TeX acronym package conventions)
 
 *Note:*
 For generating in-text citations that follow the correct citation key directly from a reference database, install and use the Zotero citation style CSL file provided in this repo (custom-better-bibtex-citekeys.csl) 
-The nice thing about this procedure is that you can write content as usual in word with a Zotero citation style that you like and then when you are ready to compile the overall document, convert the citation style to `Better BibTex Citekeys [custom]`, and you're good to go.
+The nice thing about this procedure is that content can be written as usual in word with the preferred Zotero citation style and then before  compiling the overall TeX document, just be sure to convert the citation style to `Better BibTex Citekeys [custom]`.
 
 
